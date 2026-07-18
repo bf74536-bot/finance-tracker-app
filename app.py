@@ -1,129 +1,86 @@
-import os
-import sys
-import re
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import sqlite3
+from typing import List
 
-transactions = []
+app = FastAPI(title="Industrial Finance API Engine")
 
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+# Allow connections from mobile frontend apps
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def show_menu():
-    print("=" * 40)
-    print("      🐍 PURE PYTHON FINANCE APP 🐍      ")
-    print("=" * 40)
-    print(" 1. Log a New Expense")
-    print(" 2. Log a New Income")
-    print(" 3. View Statement & Financial Dashboard")
-    print(" 4. Use Financial Calculator")
-    print(" 5. Exit Application")
-    print("=" * 40)
+# Initialize production SQL database layout
+DB_FILE = "finance_vault.db"
 
-def add_transaction(is_expense=True):
-    clear_screen()
-    title = "EXPENSE" if is_expense else "INCOME"
-    print(f"--- LOG NEW {title} ---")
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            item TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Data models for input verification
+class TransactionInput(BaseModel):
+    type: str       # "Income" or "Expense"
+    item: str
+    amount: float
+    category: str
+
+class TransactionResponse(BaseModel):
+    id: int
+    type: str
+    item: str
+    amount: float
+    category: str
+
+@app.get("/")
+def check_status():
+    return {"status": "Online", "database": "Connected to SQLite"}
+
+# 🚀 API Endpoint 1: Save transaction to real SQL database
+@app.post("/api/transactions", response_model=TransactionResponse)
+def add_transaction(tx: TransactionInput):
+    if tx.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
     
-    item = input("Enter description/name: ").strip()
-    if not item:
-        print("❌ Description cannot be blank.")
-        input("\nPress Enter to return...")
-        return
-
-    try:
-        amount = float(input("Enter amount ($): "))
-        if amount <= 0:
-            print("❌ Amount must be greater than zero.")
-            input("\nPress Enter to return...")
-            return
-    except ValueError:
-        print("❌ Invalid number format.")
-        input("\nPress Enter to return...")
-        return
-
-    category = input("Enter category (e.g., Food, Salary, Rent): ").strip()
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO transactions (type, item, amount, category) VALUES (?, ?, ?, ?)",
+        (tx.type, tx.item, tx.amount, tx.category)
+    )
+    tx_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
     
-    transactions.append({
-        "type": "Expense" if is_expense else "Income",
-        "item": item,
-        "amount": amount,
-        "category": category if category else "General"
-    })
-    print(f"\n✅ {title} successfully registered!")
-    input("\nPress Enter to return to main menu...")
+    return {**tx.dict(), "id": tx_id}
 
-def view_dashboard():
-    clear_screen()
-    print("--- FINANCIAL DASHBOARD & STATEMENT ---")
-    if not transactions:
-        print("\n[ No transaction logs found. Your balance is $0.00 ]")
-        input("\nPress Enter to return...")
-        return
-
-    total_income = 0.0
-    total_expense = 0.0
-
-    print(f"{'TYPE':<10} | {'DESCRIPTION':<15} | {'CATEGORY':<12} | {'AMOUNT':<10}")
-    print("-" * 55)
+# 🚀 API Endpoint 2: Read transaction list from database
+@app.get("/api/transactions", response_model=List[TransactionResponse])
+def get_transactions():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, type, item, amount, category FROM transactions")
+    rows = cursor.fetchall()
+    conn.close()
     
-    for tx in transactions:
-        print(f"{tx['type']:<10} | {tx['item']:<15} | {tx['category']:<12} | ${tx['amount']:>8.2f}")
-        if tx['type'] == "Income":
-            total_income += tx['amount']
-        else:
-            total_expense += tx['amount']
-            
-    net_balance = total_income - total_expense
-    
-    print("-" * 55)
-    print(f"Total Income:   ${total_income:.2f}")
-    print(f"Total Expenses: ${total_expense:.2f}")
-    print(f"Net Balance:    ${net_balance:.2f}")
-    print("-" * 55)
-    input("\nPress Enter to return to main menu...")
-
-def run_calculator():
-    clear_screen()
-    print("--- PYTHON RUNTIME CALCULATOR ---")
-    print("Type a math problem (e.g., 500 + 120 - 45) and press Enter.")
-    print("Type 'q' to go back.\n")
-    
-    while True:
-        expr = input("Calculate: ").strip()
-        if expr.lower() == 'q':
-            break
-        try:
-            clean_expr = re.sub(r'[^0-9+\-*/.]', '', expr)
-            if not clean_expr:
-                print("❌ Invalid mathematical input.")
-                continue
-            res = eval(clean_expr, {"__builtins__": None}, {})
-            print(f"Result: {float(res)}\n")
-        except ZeroDivisionError:
-            print("❌ Error: Division by zero is undefined.\n")
-        except Exception:
-            print("❌ Syntax Error: Check your math formulation.\n")
-
-def main():
-    while True:
-        clear_screen()
-        show_menu()
-        choice = input("Select an option [1-5]: ").strip()
-        
-        if choice == '1':
-            add_transaction(is_expense=True)
-        elif choice == '2':
-            add_transaction(is_expense=False)
-        elif choice == '3':
-            view_dashboard()
-        elif choice == '4':
-            run_calculator()
-        elif choice == '5':
-            clear_screen()
-            print("Goodbye! Thank you for using pure Python.")
-            sys.exit()
-        else:
-            print("❌ Choice out of bounds. Select 1 to 5.")
-            input("\nPress Enter to retry...")
-
-if __name__ == "__main__":
-    main()
+    return [
+        {"id": row[0], "type": row[1], "item": row[2], "amount": row[3], "category": row[4]}
+        for row in rows
+    ]
