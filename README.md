@@ -1,29 +1,38 @@
-# 🐍 Pure Python Finance Tracker & Calculator
+# 💰 Industrial Finance Tracker API (FastAPI & SQLite)
 
-A 100% pure Python Command-Line Interface (CLI) application engineered to log personal cash flows, track real-time budgets, and evaluate financial math expressions directly within the terminal console.
+A professional backend REST API built with Python to handle multi-user personal finance records, log variable income streams, and calculate real-time analytics using a persistent SQL database structure.
 
-## 📊 Application Features
-* **Income & Expense Logging:** Track income streams and incoming expenses dynamically by custom categories.
-* **Financial Analytics Ledger:** Instantly computes totals, expenditures, and net liquidity balances on an interactive terminal table dashboard.
-* **Integrated Math Parser:** Built-in calculation module to securely evaluate raw string math expressions (`+`, `-`, `*`, `/`) natively.
-* **Zero Dependencies:** Engineered completely out of Python's standard internal library architecture—no heavy frameworks or browser layers required.
+## 📊 Application Architecture
+- **Persistent Data Store:** Engineered using structured relational tables in **SQLite** via formal SQL parameters (`CREATE TABLE`, `INSERT INTO`).
+- **RESTful Endpoints:** Fully functioning network interface endpoints to handle secure client-side communication over the web.
+- **Input Validation System:** Implemented strict data typing validation schemas using **Pydantic** models to catch malformed payloads instantly.
 
-## 🛠️ Tech Stack & Language Core
-* **Language:** Python 3
-* **Modules Implemented:** `os`, `sys`, `re` (Regex optimization engine)
+## 🛠️ Tech Stack & Core Engines
+- **Language Core:** Python 3
+- **Web Server Framework:** FastAPI / Uvicorn
+- **Database Engine:** SQLite3 (Native Relational Database Engine)
+- **Data Validation Layer:** Pydantic
 
-## ⚙️ How to Download and Run
+## 🚀 API Endpoints Matrix
+- `GET /` - Check web service status and confirm live database connectivity.
+- `POST /api/transactions` - Securely saves a new Income or Expense record directly into the SQL relational engine.
+- `GET /api/transactions` - Reads and returns the complete list of saved cash flow transaction profiles.
 
-1. Clone this repository on your terminal system:
+## ⚙️ How to Download and Run Locally
+
+1. Clone this repository onto your terminal workspace:
    ```bash
    git clone https://github.com
    ```
-2. Step into the project workspace directory:
+2. Navigate into your project working environment directory:
    ```bash
    cd finance-tracker-app
    ```
-3. Boot up the script securely:
+3. Install the industry web server packages:
    ```bash
-   python app.py
+   pip install fastapi uvicorn pydantic
    ```
-   
+4. Boot up your live backend database application server routine:
+   ```bash
+   uvicorn app:app --reload --port 5000
+   ```
