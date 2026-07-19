@@ -1,21 +1,7 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import streamlit as st
 import sqlite3
-from typing import List
 
-app = FastAPI(title="Industrial Finance API Engine")
-
-# Allow connections from mobile frontend apps
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize production SQL database layout
+# 1. Initialize DB Layout
 DB_FILE = "finance_vault.db"
 
 def init_db():
@@ -35,52 +21,25 @@ def init_db():
 
 init_db()
 
-# Data models for input verification
-class TransactionInput(BaseModel):
-    type: str       # "Income" or "Expense"
-    item: str
-    amount: float
-    category: str
+# 2. Build Streamlit UI Front-end
+st.title("Industrial Finance API Engine")
 
-class TransactionResponse(BaseModel):
-    id: int
-    type: str
-    item: str
-    amount: float
-    category: str
+st.subheader("Add New Transaction")
+trans_type = st.selectbox("Type", ["Income", "Expense"])
+item = st.text_input("Item Name")
+amount = st.number_input("Amount", min_value=0.01, step=0.01)
+category = st.text_input("Category")
 
-@app.get("/")
-def check_status():
-    return {"status": "Online", "database": "Connected to SQLite"}
-
-# 🚀 API Endpoint 1: Save transaction to real SQL database
-@app.post("/api/transactions", response_model=TransactionResponse)
-def add_transaction(tx: TransactionInput):
-    if tx.amount <= 0:
-        raise HTTPException(status_code=400, detail="Amount must be greater than zero.")
-    
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO transactions (type, item, amount, category) VALUES (?, ?, ?, ?)",
-        (tx.type, tx.item, tx.amount, tx.category)
-    )
-    tx_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    
-    return {**tx.dict(), "id": tx_id}
-
-# 🚀 API Endpoint 2: Read transaction list from database
-@app.get("/api/transactions", response_model=List[TransactionResponse])
-def get_transactions():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, type, item, amount, category FROM transactions")
-    rows = cursor.fetchall()
-    conn.close()
-    
-    return [
-        {"id": row[0], "type": row[1], "item": row[2], "amount": row[3], "category": row[4]}
-        for row in rows
-    ]
+if st.button("Save Transaction"):
+    if item and category:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO transactions (type, item, amount, category) VALUES (?, ?, ?, ?)",
+            (trans_type, item, amount, category)
+        )
+        conn.commit()
+        conn.close()
+        st.success("Transaction saved successfully!")
+    else:
+        st.error("Please fill out all fields.")
