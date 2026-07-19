@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 
-# 1. Initialize DB Layout
+# 1. Initialize SQLite Database
 DB_FILE = "finance_vault.db"
 
 def init_db():
@@ -21,8 +21,8 @@ def init_db():
 
 init_db()
 
-# 2. Build Streamlit UI Front-end
-st.title("Industrial Finance API Engine")
+# 2. Build the User Interface
+st.title("Industrial Finance Tracker")
 
 st.subheader("Add New Transaction")
 trans_type = st.selectbox("Type", ["Income", "Expense"])
